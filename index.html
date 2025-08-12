@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Efectos de Texto para Videos</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Pacifico&family=Bebas+Neue&family=Roboto+Mono&family=Merriweather:wght@400;700&family=Playfair+Display:wght@400;700&family=Montserrat:wght@400;700&family=Oswald:wght@400;700&family=Poppins:wght@400;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .message-box {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+        }
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 360px; /* Ancho típico para videos verticales de redes sociales */
+            height: 640px; /* Alto típico para videos verticales de redes sociales */
+            background-color: #e5e7eb;
+            overflow: hidden;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        #videoPreview {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: none;
+        }
+        #canvasOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+        }
+        #placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #9ca3af;
+            font-size: 1.25rem;
+            font-weight: 600;
+            z-index: 5;
+        }
+    </style>
+</head>
+<body class="p-4 flex items-center justify-center min-h-screen">
+
+    <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-5xl mx-auto flex flex-col lg:flex-row gap-8">
+        <!-- Panel de control (izquierda) -->
+        <div class="w-full lg:w-1/3 flex flex-col gap-6">
+            <h1 class="text-3xl font-bold text-gray-800">Generador de Efectos para Videos</h1>
+
+            <!-- Cargar Video -->
+            <div class="space-y-2">
+                <label for="videoUpload" class="block text-sm font-medium text-gray-700">Cargar Video:</label>
+                <input type="file" id="videoUpload" accept="video/*" class="w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-full file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-violet-50 file:text-violet-700
+                    hover:file:bg-violet-100 cursor-pointer">
+            </div>
+
+            <!-- Controles de Texto y Animación -->
+            <div id="controls" class="space-y-4 hidden">
+                <h2 class="text-xl font-semibold text-gray-800">Texto y Animación</h2>
+                <div>
+                    <label for="textInput" class="block text-sm font-medium text-gray-700">Tu Mensaje:</label>
+                    <input type="text" id="textInput" value="¡Video Cool!" class="w-full p-2 border border-gray-300 rounded-md">
+                </div>
+                
+                <div>
+                    <label for="fontSelect" class="block text-sm font-medium text-gray-700">Fuente:</label>
+                    <select id="fontSelect" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-violet-500 focus:border-violet-500">
+                        <option value="Inter">Inter (Predeterminada)</option>
+                        <option value="Pacifico">Pacifico</option>
+                        <option value="Bebas Neue">Bebas Neue</option>
+                        <option value="Roboto Mono">Roboto Mono</option>
+                        <option value="Merriweather">Merriweather</option>
+                        <option value="Playfair Display">Playfair Display</option>
+                        <option value="Montserrat">Montserrat</option>
+                        <option value="Oswald">Oswald</option>
+                        <option value="Poppins">Poppins</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="colorInput" class="block text-sm font-medium text-gray-700">Color del Texto:</label>
+                    <input type="color" id="colorInput" value="#ffffff" class="w-full h-10 p-1 border border-gray-300 rounded-md">
+                </div>
+                
+                <div>
+                    <label for="animationSelect" class="block text-sm font-medium text-gray-700">Efecto de Animación:</label>
+                    <select id="animationSelect" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-violet-500 focus:border-violet-500">
+                        <option value="fade">Fade In</option>
+                        <option value="slideUp">Deslizar hacia arriba</option>
+                        <option value="glitch">Glitch</option>
+                        <option value="bounce">Rebote</option>
+                        <option value="rotate">Giro</option>
+                        <option value="pulse">Pulso</option>
+                        <option value="jiggle">Vibración</option>
+                        <option value="scanline">Escáner</option>
+                    </select>
+                </div>
+                
+                <button id="playPauseBtn" class="w-full bg-green-500 text-white font-medium py-2 px-4 rounded-xl shadow-md hover:bg-green-600 transition-colors">
+                    Reproducir
+                </button>
+            </div>
+            
+            <!-- Botón de Exportar -->
+            <button id="exportBtn" class="hidden w-full bg-violet-500 text-white font-bold py-3 px-6 rounded-2xl shadow-lg hover:bg-violet-600 transition-colors mt-auto">
+                Exportar Video
+            </button>
+        </div>
+
+        <!-- Área del video (derecha) -->
+        <div class="w-full lg:w-2/3 flex items-center justify-center relative">
+            <div class="video-container">
+                <video id="videoPreview" autoplay muted loop playsinline></video>
+                <canvas id="canvasOverlay"></canvas>
+                <div id="placeholder" class="absolute inset-0 flex items-center justify-center text-center text-gray-400 text-xl font-semibold">
+                    <p>Carga un video para empezar a animar el texto.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mensaje de error/información -->
+    <div id="messageBox" class="message-box bg-red-500 text-white p-4 rounded-xl shadow-lg">
+        <p id="messageText"></p>
+    </div>
+    
+    <script>
+        const videoUpload = document.getElementById('videoUpload');
+        const videoPreview = document.getElementById('videoPreview');
+        const canvasOverlay = document.getElementById('canvasOverlay');
+        const placeholder = document.getElementById('placeholder');
+        const controls = document.getElementById('controls');
+        const textInput = document.getElementById('textInput');
+        const fontSelect = document.getElementById('fontSelect');
+        const colorInput = document.getElementById('colorInput');
+        const animationSelect = document.getElementById('animationSelect');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const exportBtn = document.getElementById('exportBtn');
+        const ctx = canvasOverlay.getContext('2d');
+
+        let isPlaying = false;
+        let isExporting = false;
+        let animationFrameId = null;
+        let recorder = null;
+        const recordedChunks = [];
+
+        function showMessage(text, duration = 3000) {
+            const messageBox = document.getElementById('messageBox');
+            const messageText = document.getElementById('messageText');
+            messageText.textContent = text;
+            messageBox.style.display = 'block';
+            setTimeout(() => {
+                messageBox.style.display = 'none';
+            }, duration);
+        }
+
+        videoUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                videoPreview.src = url;
+                videoPreview.style.display = 'block';
+                placeholder.style.display = 'none';
+                controls.classList.remove('hidden');
+                exportBtn.classList.remove('hidden');
+
+                // Asegurar que el canvas tenga las mismas dimensiones que el video
+                videoPreview.onloadedmetadata = () => {
+                    canvasOverlay.width = videoPreview.videoWidth;
+                    canvasOverlay.height = videoPreview.videoHeight;
+                    videoPreview.play();
+                    isPlaying = true;
+                    playPauseBtn.textContent = 'Pausar';
+                    drawCanvas();
+                };
+            }
+        });
+
+        playPauseBtn.addEventListener('click', () => {
+            if (videoPreview.paused || videoPreview.ended) {
+                videoPreview.play();
+                isPlaying = true;
+                playPauseBtn.textContent = 'Pausar';
+                drawCanvas();
+            } else {
+                videoPreview.pause();
+                isPlaying = false;
+                playPauseBtn.textContent = 'Reproducir';
+                cancelAnimationFrame(animationFrameId);
+            }
+        });
+
+        // Loop principal de animación y renderizado
+        function drawCanvas(timestamp) {
+            if (!videoPreview || videoPreview.paused || videoPreview.ended) {
+                if (!isExporting) return;
+            }
+
+            // Dibujar el fotograma actual del video en el canvas
+            ctx.clearRect(0, 0, canvasOverlay.width, canvasOverlay.height);
+            ctx.drawImage(videoPreview, 0, 0, canvasOverlay.width, canvasOverlay.height);
+
+            const text = textInput.value;
+            if (text && text.trim() !== '') {
+                const font = fontSelect.value;
+                const color = colorInput.value;
+                const animationType = animationSelect.value;
+                const progress = (videoPreview.currentTime % 3) / 3; // Animación cíclica de 3s
+
+                // Configurar el estilo del texto
+                ctx.fillStyle = color;
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 3;
+                ctx.font = `60px '${font}'`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                let x = canvasOverlay.width / 2;
+                let y = canvasOverlay.height / 2;
+                let rotation = 0;
+                let opacity = 1;
+                let scale = 1;
+                
+                // Aplicar animaciones
+                switch (animationType) {
+                    case 'fade':
+                        opacity = progress;
+                        break;
+                    case 'slideUp':
+                        y += (1 - progress) * 100;
+                        break;
+                    case 'bounce':
+                        y += (1 - progress) * 100 - Math.sin(progress * Math.PI) * 50;
+                        break;
+                    case 'rotate':
+                        rotation = (1 - progress) * (Math.PI / 2);
+                        opacity = progress;
+                        break;
+                    case 'glitch':
+                        opacity = 1;
+                        if (Math.random() < 0.1) {
+                            ctx.fillStyle = color;
+                            ctx.fillText(text, x + (Math.random() - 0.5) * 20, y + (Math.random() - 0.5) * 20);
+                            ctx.fillStyle = color;
+                            ctx.strokeText(text, x + (Math.random() - 0.5) * 20, y + (Math.random() - 0.5) * 20);
+                            ctx.fillStyle = 'white';
+                            ctx.fillText(text, x, y);
+                            ctx.strokeText(text, x, y);
+                        }
+                        break;
+                    case 'pulse':
+                        scale = 1 + Math.sin(videoPreview.currentTime * 5) * 0.1; // Pulso de escala
+                        break;
+                    case 'jiggle':
+                        x += Math.sin(videoPreview.currentTime * 20) * 5; // Jiggle en X
+                        y += Math.cos(videoPreview.currentTime * 20) * 5; // Jiggle en Y
+                        break;
+                    case 'scanline':
+                        // Dibuja el texto normalmente
+                        ctx.fillStyle = color;
+                        ctx.fillText(text, x, y);
+                        
+                        // Añade el efecto de escáner
+                        const scanlinePos = (videoPreview.currentTime * 100) % (canvasOverlay.height + 20);
+                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+                        ctx.lineWidth = 1;
+                        for (let i = 0; i < canvasOverlay.width; i += 2) {
+                            ctx.beginPath();
+                            ctx.moveTo(i, 0);
+                            ctx.lineTo(i, canvasOverlay.height);
+                            ctx.stroke();
+                        }
+                        
+                        // Recorta el texto para que el scanline sea solo visible sobre él
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.rect(0, scanlinePos - 10, canvasOverlay.width, 20);
+                        ctx.clip();
+                        
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                        ctx.fillRect(0, scanlinePos - 10, canvasOverlay.width, 20);
+                        ctx.restore();
+                        break;
+                }
+
+                ctx.globalAlpha = opacity;
+                
+                if (animationType === 'rotate' || animationType === 'pulse' || animationType === 'jiggle') {
+                    ctx.save();
+                    ctx.translate(x, y);
+                    ctx.rotate(rotation);
+                    ctx.scale(scale, scale);
+                    ctx.fillText(text, 0, 0);
+                    ctx.strokeText(text, 0, 0);
+                    ctx.restore();
+                } else if (animationType !== 'glitch' && animationType !== 'scanline') {
+                    ctx.fillText(text, x, y);
+                    ctx.strokeText(text, x, y);
+                }
+
+                ctx.globalAlpha = 1;
+            }
+
+            if (isPlaying || isExporting) {
+                animationFrameId = requestAnimationFrame(drawCanvas);
+            }
+        }
+
+        videoPreview.addEventListener('play', () => {
+            isPlaying = true;
+            drawCanvas();
+        });
+        videoPreview.addEventListener('pause', () => {
+            isPlaying = false;
+            cancelAnimationFrame(animationFrameId);
+        });
+        videoPreview.addEventListener('ended', () => {
+            isPlaying = false;
+            playPauseBtn.textContent = 'Reproducir';
+            cancelAnimationFrame(animationFrameId);
+        });
+
+        // Eventos para actualizar la vista en tiempo real
+        textInput.addEventListener('input', drawCanvas);
+        fontSelect.addEventListener('change', drawCanvas);
+        colorInput.addEventListener('input', drawCanvas);
+        animationSelect.addEventListener('change', drawCanvas);
+
+        exportBtn.addEventListener('click', () => {
+            if (!videoPreview.src) {
+                showMessage("Por favor, carga un video primero.");
+                return;
+            }
+            if (isExporting) return;
+            
+            isExporting = true;
+            exportBtn.textContent = 'Exportando...';
+            exportBtn.disabled = true;
+            playPauseBtn.disabled = true;
+            
+            showMessage("Exportando video. Esto puede tomar un momento...", 0);
+
+            // Reiniciar el video para grabar desde el principio
+            videoPreview.currentTime = 0;
+            videoPreview.play();
+
+            const stream = canvasOverlay.captureStream(30); // 30 fps
+            recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+
+            recorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    recordedChunks.push(event.data);
+                }
+            };
+
+            recorder.onstop = () => {
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'video_animado.webm';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                
+                isExporting = false;
+                exportBtn.textContent = 'Exportar Video';
+                exportBtn.disabled = false;
+                playPauseBtn.disabled = false;
+                recordedChunks.length = 0;
+                showMessage("¡Video exportado correctamente!");
+            };
+
+            recorder.start();
+            
+            // Detener la grabación cuando el video termine
+            videoPreview.addEventListener('ended', () => {
+                if (isExporting) {
+                    recorder.stop();
+                }
+            }, { once: true });
+        });
+    </script>
+</body>
+</html>
