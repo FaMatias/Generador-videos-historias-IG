@@ -118,6 +118,9 @@
                         <option value="pulse">Pulso</option>
                         <option value="jiggle">Vibración</option>
                         <option value="scanline">Escáner</option>
+                        <option value="zoom">Zoom</option>
+                        <option value="wave">Onda</option>
+                        <option value="rotateZoom">Giro y Zoom</option>
                     </select>
                 </div>
                 
@@ -254,13 +257,6 @@
                     case 'slideUp':
                         y += (1 - progress) * 100;
                         break;
-                    case 'bounce':
-                        y += (1 - progress) * 100 - Math.sin(progress * Math.PI) * 50;
-                        break;
-                    case 'rotate':
-                        rotation = (1 - progress) * (Math.PI / 2);
-                        opacity = progress;
-                        break;
                     case 'glitch':
                         opacity = 1;
                         if (Math.random() < 0.1) {
@@ -272,6 +268,13 @@
                             ctx.fillText(text, x, y);
                             ctx.strokeText(text, x, y);
                         }
+                        break;
+                    case 'bounce':
+                        y += (1 - progress) * 100 - Math.sin(progress * Math.PI) * 50;
+                        break;
+                    case 'rotate':
+                        rotation = (1 - progress) * (Math.PI / 2);
+                        opacity = progress;
                         break;
                     case 'pulse':
                         scale = 1 + Math.sin(videoPreview.currentTime * 5) * 0.1; // Pulso de escala
@@ -306,11 +309,33 @@
                         ctx.fillRect(0, scanlinePos - 10, canvasOverlay.width, 20);
                         ctx.restore();
                         break;
+                    case 'zoom':
+                        scale = progress * 1.2;
+                        break;
+                    case 'wave':
+                        ctx.save();
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        const textWidth = ctx.measureText(text).width;
+                        const startX = (canvasOverlay.width - textWidth) / 2;
+                        for (let i = 0; i < text.length; i++) {
+                            const char = text[i];
+                            const charX = ctx.measureText(text.substring(0, i)).width + startX;
+                            const waveY = y + Math.sin(videoPreview.currentTime * 10 + i) * 10;
+                            ctx.fillText(char, charX, waveY);
+                            ctx.strokeText(char, charX, waveY);
+                        }
+                        ctx.restore();
+                        break;
+                    case 'rotateZoom':
+                        rotation = progress * Math.PI * 2; // Gira 360 grados
+                        scale = progress * 1.2;
+                        break;
                 }
 
                 ctx.globalAlpha = opacity;
                 
-                if (animationType === 'rotate' || animationType === 'pulse' || animationType === 'jiggle') {
+                if (animationType === 'rotate' || animationType === 'pulse' || animationType === 'jiggle' || animationType === 'zoom' || animationType === 'rotateZoom') {
                     ctx.save();
                     ctx.translate(x, y);
                     ctx.rotate(rotation);
@@ -318,7 +343,7 @@
                     ctx.fillText(text, 0, 0);
                     ctx.strokeText(text, 0, 0);
                     ctx.restore();
-                } else if (animationType !== 'glitch' && animationType !== 'scanline') {
+                } else if (animationType !== 'glitch' && animationType !== 'scanline' && animationType !== 'wave') {
                     ctx.fillText(text, x, y);
                     ctx.strokeText(text, x, y);
                 }
